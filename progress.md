@@ -58,4 +58,24 @@ Register → login → JWT working end-to-end
 
 ---
 
-## v4 — Next: Milestone 2 (Log Parser + Upload Endpoint)
+## v4 — Log Parser + Upload Endpoint (Milestone 2 complete)
+
+### What was done
+- Created `services/log_parser.py` — pure function `parse_zscaler_log(file_bytes) -> (rows, summary)`
+  - Maps columns by fixed ZScaler NSS position order
+  - Normalizes null sentinels ("None", "N/A", "NA", "") → None
+  - Casts numeric fields (bytes, risk_score, response_code) to int
+  - Converts ZScaler timestamp → ISO 8601
+  - Builds summary stats: totals, blocked %, threats, top users, top categories, requests by hour
+- Updated `routes/upload.py` — full `POST /upload` endpoint
+  - JWT protected, validates file extension (.log, .txt, .csv)
+  - Runs parser, saves result to `uploads` table, returns JSON
+- Updated `logexample.txt` with 5 varied rows (blocked, allowed, malware, normal traffic)
+- Tested end-to-end via Postman — all 5 rows parsed correctly, summary stats accurate
+
+### Milestone 2 complete ✓
+Upload log → parsed rows + summary returned, saved to DB
+
+---
+
+## v5 — Next: Milestone 3 (Gemini AI Analysis)
