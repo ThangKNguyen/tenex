@@ -38,8 +38,24 @@ USE THIS FILE TO TRACK PROJECT PROGRESS
 - Verified in pgAdmin: `users`, `uploads`, and `alembic_version` tables exist under `logsentinel` database
 
 ### Not done yet (next milestones)
-- Test auth endpoints (`/auth/register`, `/auth/login`)
 - Log parser (`services/log_parser.py`)
 - AI analysis service (`services/ai_analysis.py`)
 - Full upload endpoint
 - React frontend
+
+---
+
+## v3 — Auth Endpoints Tested (Milestone 1 complete)
+
+### What was done
+- Ran Flask dev server locally with venv activated and env vars set
+- Tested `POST /auth/register` via Postman — user created successfully
+- Tested `POST /auth/login` via Postman — returned valid JWT access token
+- Verified JWT is correctly signed and contains user UUID in `sub` claim
+
+### Milestone 1 complete ✓
+Register → login → JWT working end-to-end
+
+---
+
+## v4 — Next: Milestone 2 (Log Parser + Upload Endpoint)
