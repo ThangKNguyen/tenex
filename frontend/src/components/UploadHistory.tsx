@@ -1,6 +1,7 @@
 /**
  * Upload history panel — rendered inside the drawer in DashboardPage.
  * Clicking an item loads the full report without re-uploading.
+ * The delete button removes the entry from history after confirmation.
  */
 
 interface HistoryItem {
@@ -18,9 +19,10 @@ interface UploadHistoryProps {
   items: HistoryItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export function UploadHistory({ items, selectedId, onSelect }: UploadHistoryProps) {
+export function UploadHistory({ items, selectedId, onSelect, onDelete }: UploadHistoryProps) {
   if (!items.length) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-5 text-center">
@@ -40,7 +42,7 @@ export function UploadHistory({ items, selectedId, onSelect }: UploadHistoryProp
         const hasThreats = (item.summary?.threats_detected ?? 0) > 0;
 
         return (
-          <li key={item.upload_id}>
+          <li key={item.upload_id} className="group relative">
             <button
               onClick={() => onSelect(item.upload_id)}
               className={[
@@ -54,7 +56,7 @@ export function UploadHistory({ items, selectedId, onSelect }: UploadHistoryProp
                 <span className="text-base mt-0.5 shrink-0">
                   {hasThreats ? "🔴" : "📄"}
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 pr-6">
                   <p className={`text-sm font-medium truncate ${isSelected ? "text-accent-cyan" : "text-text-primary"}`}>
                     {item.filename}
                   </p>
@@ -78,6 +80,19 @@ export function UploadHistory({ items, selectedId, onSelect }: UploadHistoryProp
                   )}
                 </div>
               </div>
+            </button>
+
+            {/* Delete button — visible on hover so it doesn't clutter the list */}
+            <button
+              onClick={(e) => {
+                // Stop propagation so clicking delete doesn't also select the item.
+                e.stopPropagation();
+                onDelete(item.upload_id);
+              }}
+              title="Delete from history"
+              className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-text-muted hover:text-accent-red p-1 rounded"
+            >
+              ✕
             </button>
           </li>
         );

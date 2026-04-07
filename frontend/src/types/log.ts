@@ -41,11 +41,23 @@ export interface LogSummary {
   data_transferred_mb: number;
 }
 
+export interface Anomaly {
+  row_index: number;
+  reason: string;
+  confidence: number; // 0.0–1.0
+  tags: string[];
+}
+
+export interface AiAnalysis {
+  narrative: string;
+  anomalies: Anomaly[];
+}
+
 export interface UploadResult {
   upload_id: string;
   filename?: string;
   uploaded_at?: string;
   summary: LogSummary;
   rows: LogRow[];
-  ai_analysis: null;
+  ai_analysis: AiAnalysis | null;
 }

@@ -1,8 +1,13 @@
+import logging
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..extensions import db
 from ..models.upload import Upload
 from ..services.log_parser import parse_zscaler_log
+from ..services.ai_analysis import analyze_log
+
+logger = logging.getLogger(__name__)
 
 upload_bp = Blueprint("upload", __name__)
 
@@ -37,6 +42,27 @@ def list_uploads():
         }
         for u in uploads
     ]), 200
+
+
+@upload_bp.route("/uploads/<upload_id>", methods=["DELETE"])
+@jwt_required()
+def delete_upload(upload_id: str):
+    """
+    DELETE /uploads/<upload_id>
+    Permanently removes the upload record. We check user_id so users
+    can only delete their own uploads — not anyone else's.
+    """
+    user_id = get_jwt_identity()
+
+    upload = Upload.query.filter_by(id=upload_id, user_id=user_id).first()
+
+    if not upload:
+        return jsonify({"error": "upload not found"}), 404
+
+    db.session.delete(upload)
+    db.session.commit()
+
+    return jsonify({"message": "deleted"}), 200
 
 
 @upload_bp.route("/uploads/<upload_id>", methods=["GET"])
@@ -96,13 +122,22 @@ def upload_log():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    # Run AI analysis — if Gemini fails for any reason (bad key, network,
+    # malformed response) we still return the parsed log. Analysts get the
+    # data; they just lose the narrative and anomaly flags.
+    ai_analysis = None
+    try:
+        ai_analysis = analyze_log(rows)
+    except Exception as exc:
+        logger.warning("AI analysis failed, continuing without it: %s", exc)
+
     upload = Upload(
         user_id=user_id,
         filename=file.filename,
         status="done",
         parsed_data=rows,
         summary=summary,
-        ai_analysis=None,  # Milestone 3
+        ai_analysis=ai_analysis,
     )
     db.session.add(upload)
     db.session.commit()
@@ -111,5 +146,5 @@ def upload_log():
         "upload_id": str(upload.id),
         "summary": summary,
         "rows": rows,
-        "ai_analysis": None,
+        "ai_analysis": ai_analysis,
     }), 200

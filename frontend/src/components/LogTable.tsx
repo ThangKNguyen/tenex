@@ -7,10 +7,13 @@
  */
 
 import { useState } from "react";
-import type { LogRow } from "@/types/log";
+import type { Anomaly, LogRow } from "@/types/log";
 
 interface LogTableProps {
   rows: LogRow[];
+  // Anomalies from AI analysis — used to highlight flagged rows.
+  // Optional so the table still works when AI analysis is unavailable.
+  anomalies?: Anomaly[];
 }
 
 type ActionFilter = "all" | "Allowed" | "Blocked";
@@ -23,9 +26,12 @@ const PRIMARY_FIELDS = new Set([
   "dst_ip", "reason",
 ]);
 
-export function LogTable({ rows }: LogTableProps) {
+export function LogTable({ rows, anomalies = [] }: LogTableProps) {
   const [filter, setFilter] = useState<ActionFilter>("all");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  // Build a lookup from row index → anomaly so we can decorate rows in O(1).
+  const anomalyByIndex = new Map(anomalies.map((a) => [a.row_index, a]));
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.action === filter);
 
@@ -75,23 +81,41 @@ export function LogTable({ rows }: LogTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row, idx) => (
+            {filtered.map((row, filteredIdx) => {
+              // Preserve the original row index so anomaly lookup works
+              // correctly even when the table is filtered by action.
+              const originalIdx = rows.indexOf(row);
+              const anomaly = anomalyByIndex.get(originalIdx);
+              const isFlagged = anomaly !== undefined;
+
+              return (
               <>
-                {/* Main row */}
+                {/* Main row — red left border + tinted bg when anomalous */}
                 <tr
-                  key={`row-${idx}`}
-                  onClick={() => toggleRow(idx)}
+                  key={`row-${originalIdx}`}
+                  onClick={() => toggleRow(filteredIdx)}
+                  title={isFlagged ? `⚠ ${anomaly.reason} (${Math.round(anomaly.confidence * 100)}% confidence)` : undefined}
                   className={[
                     "border-b border-slate-800 cursor-pointer transition-colors",
-                    expandedIdx === idx ? "bg-slate-800/40" : idx % 2 !== 0 ? "bg-white/[0.01]" : "",
+                    isFlagged
+                      ? "bg-red-950/20 border-l-2 border-l-accent-red"
+                      : expandedIdx === filteredIdx
+                      ? "bg-slate-800/40"
+                      : filteredIdx % 2 !== 0
+                      ? "bg-white/[0.01]"
+                      : "",
                     "hover:bg-white/[0.03]",
                   ].join(" ")}
                 >
-                  {/* Expand chevron */}
+                  {/* Expand chevron — shows ⚠ instead when row is anomalous */}
                   <td className="pl-4 pr-1 py-3 text-text-muted">
-                    <span className={`inline-block transition-transform ${expandedIdx === idx ? "rotate-90" : ""}`}>
-                      ›
-                    </span>
+                    {isFlagged ? (
+                      <span className="text-accent-red text-xs">⚠</span>
+                    ) : (
+                      <span className={`inline-block transition-transform ${expandedIdx === filteredIdx ? "rotate-90" : ""}`}>
+                        ›
+                      </span>
+                    )}
                   </td>
 
                   <td className="px-4 py-3 font-mono text-text-muted whitespace-nowrap">
@@ -147,8 +171,8 @@ export function LogTable({ rows }: LogTableProps) {
                 </tr>
 
                 {/* Expanded detail row — shows all remaining fields as key/value pairs */}
-                {expandedIdx === idx && (
-                  <tr key={`expanded-${idx}`} className="border-b border-slate-800 bg-slate-900/50">
+                {expandedIdx === filteredIdx && (
+                  <tr key={`expanded-${originalIdx}`} className="border-b border-slate-800 bg-slate-900/50">
                     <td colSpan={12} className="px-8 py-4">
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-2">
                         {Object.entries(row)
@@ -164,7 +188,8 @@ export function LogTable({ rows }: LogTableProps) {
                   </tr>
                 )}
               </>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 

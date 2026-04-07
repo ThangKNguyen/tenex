@@ -13,7 +13,10 @@ import { useAuthStore } from "@/store/authStore";
 import { apiClient } from "@/lib/api";
 import { UploadZone } from "@/components/UploadZone";
 import { SummaryCards } from "@/components/SummaryCards";
+import { AiNarrativeSummary } from "@/components/AiNarrativeSummary";
+import { EventTimeline } from "@/components/EventTimeline";
 import { LogTable } from "@/components/LogTable";
+import { AnomalyPanel } from "@/components/AnomalyPanel";
 import { UploadHistory } from "@/components/UploadHistory";
 import type { UploadResult } from "@/types/log";
 
@@ -40,6 +43,19 @@ export default function DashboardPage() {
       return data as UploadResult;
     },
     enabled: selectedId !== null,
+  });
+
+  const deleteMutation = useMutation<void, AxiosError, string>({
+    mutationFn: async (uploadId) => {
+      await apiClient.delete(`/uploads/${uploadId}`);
+    },
+    onSuccess: (_, uploadId) => {
+      // If the deleted item was currently loaded, clear the view.
+      if (selectedId === uploadId) {
+        setSelectedId(null);
+      }
+      historyQuery.refetch();
+    },
   });
 
   const uploadMutation = useMutation<UploadResult, AxiosError<{ error: string }>, File>({
@@ -124,6 +140,7 @@ export default function DashboardPage() {
               items={historyQuery.data ?? []}
               selectedId={selectedId}
               onSelect={handleSelectHistory}
+              onDelete={(id) => deleteMutation.mutate(id)}
             />
           </aside>
         </>
@@ -166,8 +183,18 @@ export default function DashboardPage() {
 
         {result && !detailQuery.isFetching && (
           <>
+            {/* 1. Summary Cards — numbers at a glance */}
             <SummaryCards summary={result.summary} />
 
+            {/* 2. AI Narrative — "what actually happened" in plain English */}
+            {result.ai_analysis && (
+              <AiNarrativeSummary analysis={result.ai_analysis} rows={result.rows} />
+            )}
+
+            {/* 3. Timeline — when did activity spike? */}
+            <EventTimeline summary={result.summary} />
+
+            {/* 4. Log Table — full data, anomalous rows highlighted red */}
             <div className="flex justify-end">
               <button
                 onClick={() => setShowLogs((prev) => !prev)}
@@ -177,7 +204,15 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {showLogs && <LogTable rows={result.rows} />}
+            {showLogs && (
+              <LogTable
+                rows={result.rows}
+                anomalies={result.ai_analysis?.anomalies}
+              />
+            )}
+
+            {/* 5. Anomaly Panel — all blocked rows, AI-enriched where available */}
+            <AnomalyPanel analysis={result.ai_analysis} rows={result.rows} />
           </>
         )}
       </main>
