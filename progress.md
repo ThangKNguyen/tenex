@@ -18,8 +18,27 @@ USE THIS FILE TO TRACK PROJECT PROGRESS
 - Created `.env` and `.env.example` with all required environment variables
 
 ### Not done yet (next milestones)
-- Docker Compose + Postgres setup
-- Flask-Migrate database migrations
+- Log parser (`services/log_parser.py`)
+- AI analysis service (`services/ai_analysis.py`)
+- Full upload endpoint
+- React frontend
+
+---
+
+## v2 — Docker + PostgreSQL + Migrations (Milestone 1 continued)
+
+### What was done
+- Created `docker-compose.yml` — runs Postgres and Flask backend as Docker services
+- Created `backend/Dockerfile` — builds Flask app, runs `flask db upgrade` on start
+- Created `backend/.dockerignore` — excludes venv, pycache, .env from Docker build
+- Ran `flask db init` — initialized Flask-Migrate migrations folder
+- Changed Docker Postgres external port from `5432` to `5433` to avoid conflict with local Postgres installation
+- Ran `flask db migrate -m "initial"` — auto-generated migration from models
+- Ran `flask db upgrade` — applied migration, created `users` and `uploads` tables in Postgres
+- Verified in pgAdmin: `users`, `uploads`, and `alembic_version` tables exist under `logsentinel` database
+
+### Not done yet (next milestones)
+- Test auth endpoints (`/auth/register`, `/auth/login`)
 - Log parser (`services/log_parser.py`)
 - AI analysis service (`services/ai_analysis.py`)
 - Full upload endpoint
