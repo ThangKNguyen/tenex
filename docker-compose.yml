@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"   # Using 5433 externally to avoid conflict with local Postgres on 5432
+    environment:
+      POSTGRES_USER: logsentinel
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: logsentinel
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Health check so the backend waits for Postgres to be fully ready
+    # before attempting migrations — avoids "connection refused" race condition.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logsentinel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://logsentinel:password@db:5432/logsentinel
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-3600}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      FLASK_APP: wsgi.py
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres_data:
