@@ -78,4 +78,31 @@ Upload log → parsed rows + summary returned, saved to DB
 
 ---
 
-## v5 — Next: Milestone 3 (Gemini AI Analysis)
+## v5 — React Frontend (Milestone 2 frontend complete)
+
+### What was done
+- Set up Vite + React 18 + TypeScript + Tailwind CSS + shadcn config
+- Created `types/log.ts` — TypeScript types mirroring backend data shapes
+- Created `lib/api.ts` — Axios instance with JWT interceptor auto-injecting auth header
+- Created `store/authStore.ts` — Zustand store persisted to localStorage
+- Created `App.tsx` — React Router with auth guard (redirect to /login if no token)
+- Created `LoginPage.tsx` — login/register toggle, polished with shield icon and subtle background
+- Created `UploadZone.tsx` — drag-and-drop file upload with spinner loading state
+- Created `SummaryCards.tsx` — 5 stat cards with colored left border accents
+- Created `LogTable.tsx` — full log table with:
+  - Separate Date and Time columns
+  - Action filter (All / Allowed / Blocked)
+  - Click-to-expand rows showing secondary fields (user agent, protocol, bytes, etc.)
+  - URL column truncated, full URL visible in expanded row
+- Created `UploadHistory.tsx` — history drawer with file/threat icons and pill badges
+- Created `DashboardPage.tsx` — main dashboard with:
+  - History drawer toggled from navbar (doesn't take up main content space)
+  - Empty state when no report loaded
+  - View Logs ↓ toggle button
+  - Spinner when loading history item
+- Added `GET /uploads` and `GET /uploads/<id>` backend endpoints for history feature
+- History persists across refreshes — reports saved to DB, reloadable from history drawer
+
+### Not done yet
+- Gemini AI analysis (`services/ai_analysis.py`)
+- AI narrative + anomaly panel on frontend
