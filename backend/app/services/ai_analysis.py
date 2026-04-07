@@ -20,15 +20,14 @@ _RELEVANT_FIELDS = {
     "risk_score", "threat_severity", "rule_applied",
 }
 
-# System instruction sets the analyst persona separately from the user prompt.
-# This is the recommended pattern in the Gemini SDK docs.
 _SYSTEM_INSTRUCTION = "You are a senior SOC analyst reviewing ZScaler web proxy logs."
 
-# User prompt template — {log_json} is filled at call time.
-# Exact format from CLAUDE.md line 277. Double-braces {{ }} escape the
-# literal braces in the JSON format example so .format() doesn't choke.
+# All rows are sent so the narrative has full context and anomaly detection
+# can catch cross-row patterns (e.g. allowed upload after a blocked malware hit).
+# row_index is embedded explicitly so Gemini's output maps back to the correct
+# position in the original unfiltered table regardless of array position.
 _PROMPT_TEMPLATE = """\
-You will be given a JSON array of pre-filtered log entries (blocked requests and high-risk traffic only).
+You will be given a complete JSON array of all log entries from a ZScaler web proxy log file.
 Each entry has a "row_index" field — use that exact value in your anomaly output, not the position in this array.
 Other fields: timestamp, user, department, src_ip, dst_ip, protocol, url, action,
 reason, url_category, bytes_sent, bytes_received, http_method,
@@ -36,15 +35,19 @@ response_code, threat_name, risk_score, threat_severity, rule_applied.
 
 Your job is to:
 1. Write a concise plain-English narrative (3-5 sentences) summarizing
-   what happened in this log file. Highlight the most important security
+   what happened across the entire log file. Highlight the most important security
    events. Write it so a SOC analyst can read it in 10 seconds and know
    exactly what needs attention.
+   Rules for the narrative:
+   - Always refer to users by their email address, never by IP address.
+   - Always flag repeated failed login attempts (HTTP 401 responses to the same endpoint in quick succession) as a brute force indicator.
+   - Mention post-block uploads or outbound transfers from the same user/IP as potential exfiltration.
 
-2. Identify anomalous entries. Look for:
+2. Identify anomalous entries across all rows — including allowed traffic. Look for:
    - High risk scores (>70) or critical/high threat severity
    - Malware, spyware, or suspicious domain access
-   - Large data uploads (potential exfiltration)
-   - Unusual user agents (curl, scripts) accessing sensitive URLs
+   - Large data uploads (potential exfiltration), even if allowed
+   - Unusual user agents (curl, scripts) accessing any URLs
    - Repeated blocked requests from the same user/IP
    - Access at unusual hours (outside 8am-6pm)
    - Suspicious cross-row patterns (e.g., block followed by large upload from same IP)
@@ -70,7 +73,10 @@ Log entries:
 
 def analyze_log(rows: list[dict]) -> dict:
     """
-    Send parsed log rows to Gemini and return AI analysis.
+    Send all parsed log rows to Gemini and return AI analysis.
+
+    Sends the full log so the narrative has complete context and anomaly
+    detection can catch cross-row patterns across allowed and blocked traffic.
 
     Args:
         rows: Parsed log rows from log_parser.parse_zscaler_log().
@@ -81,30 +87,18 @@ def analyze_log(rows: list[dict]) -> dict:
     Raises:
         ValueError: If Gemini returns something that isn't valid JSON.
     """
-    # Client auto-reads GEMINI_API_KEY from the environment.
+    if not rows:
+        return {"narrative": "Log file contained no rows.", "anomalies": []}
+
     client = genai.Client()
 
-    # Only send rows that are worth analyzing — blocked requests or anything
-    # with a high risk score (>70). Allowed, low-risk rows add noise and
-    # cause the model to flag benign traffic as suspicious.
-    # We embed row_index explicitly so the model's anomaly indices map back
-    # to the correct positions in the full unfiltered table.
+    # Embed row_index explicitly in each row so Gemini's anomaly output
+    # always references the correct original position in the table.
     trimmed_rows = []
-    for original_idx, row in enumerate(rows):
-        is_blocked = row.get("action") == "Blocked"
-        risk = row.get("risk_score")
-        is_high_risk = isinstance(risk, int) and risk > 70
-
-        if not (is_blocked or is_high_risk):
-            continue
-
+    for idx, row in enumerate(rows):
         trimmed = {k: v for k, v in row.items() if k in _RELEVANT_FIELDS}
-        trimmed["row_index"] = original_idx
+        trimmed["row_index"] = idx
         trimmed_rows.append(trimmed)
-
-    # If nothing qualifies, return a clean result without hitting the API.
-    if not trimmed_rows:
-        return {"narrative": "No blocked or high-risk requests found in this log.", "anomalies": []}
 
     prompt = _PROMPT_TEMPLATE.format(log_json=json.dumps(trimmed_rows, indent=2))
 

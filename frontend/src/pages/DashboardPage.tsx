@@ -5,7 +5,7 @@
  * It slides in as an overlay drawer so it never displaces the main content.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
@@ -26,7 +26,20 @@ export default function DashboardPage() {
 
   const [showLogs, setShowLogs] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Persist the selected upload across refreshes so the analyst doesn't
+  // lose their place when the page reloads.
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => localStorage.getItem("selectedUploadId")
+  );
+
+  useEffect(() => {
+    if (selectedId) {
+      localStorage.setItem("selectedUploadId", selectedId);
+    } else {
+      localStorage.removeItem("selectedUploadId");
+    }
+  }, [selectedId]);
 
   const historyQuery = useQuery({
     queryKey: ["uploads"],
@@ -146,8 +159,8 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* Main content — full width always */}
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         <UploadZone
           onFile={(file) => uploadMutation.mutate(file)}
           isLoading={uploadMutation.isPending}
@@ -183,36 +196,46 @@ export default function DashboardPage() {
 
         {result && !detailQuery.isFetching && (
           <>
-            {/* 1. Summary Cards — numbers at a glance */}
-            <SummaryCards summary={result.summary} />
-
-            {/* 2. AI Narrative — "what actually happened" in plain English */}
+            {/* AI Narrative — full width at the top */}
             {result.ai_analysis && (
-              <AiNarrativeSummary analysis={result.ai_analysis} rows={result.rows} />
+              <AiNarrativeSummary analysis={result.ai_analysis} />
             )}
 
-            {/* 3. Timeline — when did activity spike? */}
-            <EventTimeline summary={result.summary} />
+            {/* Two-column layout — only timeline + blocked requests sit next to the
+                summary cards. Log entries live below so they span the full width. */}
+            <div className="flex gap-6 items-stretch">
 
-            {/* 4. Log Table — full data, anomalous rows highlighted red */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowLogs((prev) => !prev)}
-                className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-all"
-              >
-                {showLogs ? "Hide Logs ↑" : "View Logs ↓"}
-              </button>
+              {/* Left column — cards stretch to match the combined right-column height */}
+              <div className="w-52 shrink-0">
+                <SummaryCards summary={result.summary} vertical />
+              </div>
+
+              {/* Right column — timeline + blocked requests only */}
+              <div className="flex-1 min-w-0 space-y-6">
+                <EventTimeline summary={result.summary} />
+                <AnomalyPanel analysis={result.ai_analysis} rows={result.rows} />
+              </div>
+
             </div>
 
-            {showLogs && (
-              <LogTable
-                rows={result.rows}
-                anomalies={result.ai_analysis?.anomalies}
-              />
-            )}
+            {/* Log entries — full width below the two-column section */}
+            <div>
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={() => setShowLogs((prev) => !prev)}
+                  className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-all"
+                >
+                  {showLogs ? "Hide Logs ↑" : "View Logs ↓"}
+                </button>
+              </div>
 
-            {/* 5. Anomaly Panel — all blocked rows, AI-enriched where available */}
-            <AnomalyPanel analysis={result.ai_analysis} rows={result.rows} />
+              {showLogs && (
+                <LogTable
+                  rows={result.rows}
+                  anomalies={result.ai_analysis?.anomalies}
+                />
+              )}
+            </div>
           </>
         )}
       </main>

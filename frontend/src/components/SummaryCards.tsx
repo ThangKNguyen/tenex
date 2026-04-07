@@ -7,6 +7,7 @@ import type { LogSummary } from "@/types/log";
 
 interface SummaryCardsProps {
   summary: LogSummary;
+  vertical?: boolean; // stack cards in a single column instead of a row
 }
 
 interface CardProps {
@@ -35,14 +36,14 @@ function Card({ label, value, sub, accent = "cyan" }: CardProps) {
   );
 }
 
-export function SummaryCards({ summary }: SummaryCardsProps) {
+export function SummaryCards({ summary, vertical = false }: SummaryCardsProps) {
   const timeRange =
     summary.time_range?.start && summary.time_range?.end
       ? `${summary.time_range.start.slice(0, 10)} — ${summary.time_range.end.slice(0, 10)}`
       : "—";
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className={vertical ? "flex flex-col gap-4 h-full [&>*]:flex-1" : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"}>
       <Card
         label="Total Requests"
         value={summary.total_requests.toLocaleString()}

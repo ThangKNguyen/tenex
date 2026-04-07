@@ -8,6 +8,9 @@
 
 import { useState } from "react";
 import type { Anomaly, LogRow } from "@/types/log";
+import { Pagination } from "@/components/Pagination";
+
+const PAGE_SIZE = 5;
 
 interface LogTableProps {
   rows: LogRow[];
@@ -29,11 +32,20 @@ const PRIMARY_FIELDS = new Set([
 export function LogTable({ rows, anomalies = [] }: LogTableProps) {
   const [filter, setFilter] = useState<ActionFilter>("all");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
 
-  // Build a lookup from row index → anomaly so we can decorate rows in O(1).
   const anomalyByIndex = new Map(anomalies.map((a) => [a.row_index, a]));
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.action === filter);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pageSlice = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 whenever the filter changes so we don't land on an empty page.
+  function handleFilter(f: ActionFilter) {
+    setFilter(f);
+    setPage(1);
+    setExpandedIdx(null);
+  }
 
   function toggleRow(idx: number) {
     setExpandedIdx((prev) => (prev === idx ? null : idx));
@@ -45,13 +57,19 @@ export function LogTable({ rows, anomalies = [] }: LogTableProps) {
       {/* Header + filter */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
         <h2 className="text-sm font-medium text-text-muted uppercase tracking-wider">
-          Log Entries <span className="text-text-primary font-mono ml-1">{filtered.length}</span>
+          Log Entries{" "}
+          <span className="text-text-primary font-mono ml-1">{filtered.length}</span>
+          {totalPages > 1 && (
+            <span className="text-text-muted font-mono ml-2 text-xs normal-case tracking-normal">
+              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} shown
+            </span>
+          )}
         </h2>
         <div className="flex gap-1 bg-bg-primary rounded-lg p-1">
           {(["all", "Allowed", "Blocked"] as ActionFilter[]).map((opt) => (
             <button
               key={opt}
-              onClick={() => setFilter(opt)}
+              onClick={() => handleFilter(opt)}
               className={[
                 "px-3 py-1 rounded text-xs font-medium transition-colors",
                 filter === opt ? "bg-bg-surface text-text-primary" : "text-text-muted hover:text-text-primary",
@@ -81,9 +99,7 @@ export function LogTable({ rows, anomalies = [] }: LogTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row, filteredIdx) => {
-              // Preserve the original row index so anomaly lookup works
-              // correctly even when the table is filtered by action.
+            {pageSlice.map((row, filteredIdx) => {
               const originalIdx = rows.indexOf(row);
               const anomaly = anomalyByIndex.get(originalIdx);
               const isFlagged = anomaly !== undefined;
@@ -197,6 +213,8 @@ export function LogTable({ rows, anomalies = [] }: LogTableProps) {
           <p className="text-text-muted text-sm text-center py-10">No rows match this filter.</p>
         )}
       </div>
+
+      <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   );
 }
