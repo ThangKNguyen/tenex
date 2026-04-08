@@ -9,6 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Run migrations then start the dev server.
-# Using flask run (not gunicorn) for now since this is local dev.
-CMD ["sh", "-c", "flask db upgrade && flask run --host=0.0.0.0 --port=5000"]
+# Run migrations then start gunicorn.
+# $PORT is injected by Render at runtime — fall back to 5000 for local Docker.
+CMD ["sh", "-c", "flask db upgrade && gunicorn -b 0.0.0.0:${PORT:-5000} wsgi:app"]
