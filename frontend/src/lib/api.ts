@@ -6,7 +6,11 @@
 import axios from "axios";
 import { useAuthStore } from "@/store/authStore";
 
-export const apiClient = axios.create({ baseURL: "" });
+// In dev, Vite's proxy handles routing to the backend.
+// In production, VITE_API_URL points to the deployed backend.
+export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "",
+});
 
 // Attach the JWT token to every outgoing request.
 apiClient.interceptors.request.use((config) => {
