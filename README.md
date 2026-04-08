@@ -102,6 +102,19 @@ Log entries:
 {log_json}
 ```
 
+### Limitations and scaling considerations
+
+This prototype sends the **entire parsed log** to Gemini in a single prompt. This works well for small-to-medium logs like the included examples (5–20 rows), but breaks down with large log files because:
+
+- **Token cost** — every row is serialized as JSON, so a 10,000-row log would consume a massive number of tokens per request
+- **Context window** — Gemini has a finite context limit. Logs beyond a few hundred rows risk exceeding it, causing truncated or failed analysis
+
+For production-scale log analysis, possible approaches include:
+
+- **Chunked analysis** — split the log into batches (e.g. 100 rows each), run Gemini on each chunk, then use a final summarization pass to merge the per-chunk narratives and deduplicate anomalies
+- **Pre-filter with heuristics** — use deterministic rules (high risk score, known bad categories, off-hours access) to flag candidate rows first, then only send those candidates + surrounding context to Gemini for deeper analysis
+- **Embeddings + RAG** — embed each log row, retrieve the most relevant clusters, and send only those to Gemini with a focused prompt
+
 ---
 
 ## Local Setup
