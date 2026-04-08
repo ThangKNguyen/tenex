@@ -94,6 +94,7 @@ def _build_summary(rows: list[dict]) -> dict:
             "blocked_pct": 0.0,
             "threats_detected": 0,
             "critical_threats": 0,
+            "high_threats": 0,
             "top_blocked_users": [],
             "top_categories": [],
             "requests_by_hour": [],
@@ -106,11 +107,18 @@ def _build_summary(rows: list[dict]) -> dict:
     allowed_count = sum(1 for r in rows if r.get("action") == "Allowed")
     total = len(rows)
 
-    threats_detected = sum(1 for r in rows if r.get("threat_name"))
+    # Count by severity so all three numbers use the same criteria.
+    # threat_name alone is unreliable — some high-severity rows (e.g. curl-based
+    # suspicious access) have a severity set but no specific threat_name populated.
     critical_threats = sum(
         1 for r in rows
         if r.get("threat_severity") and r["threat_severity"].lower() == "critical"
     )
+    high_threats = sum(
+        1 for r in rows
+        if r.get("threat_severity") and r["threat_severity"].lower() == "high"
+    )
+    threats_detected = critical_threats + high_threats
 
     blocked_user_counts: Counter = Counter()
     for r in rows:
@@ -164,6 +172,7 @@ def _build_summary(rows: list[dict]) -> dict:
         "blocked_pct": round((blocked_count / total) * 100, 1) if total > 0 else 0.0,
         "threats_detected": threats_detected,
         "critical_threats": critical_threats,
+        "high_threats": high_threats,
         "top_blocked_users": top_blocked_users,
         "top_categories": top_categories,
         "requests_by_hour": requests_by_hour,

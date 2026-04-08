@@ -35,6 +35,7 @@ export interface LogSummary {
   blocked_pct: number;
   threats_detected: number;
   critical_threats: number;
+  high_threats: number;
   top_blocked_users: { user: string; count: number }[];
   top_categories: { category: string; count: number }[];
   requests_by_hour: { hour: string; allowed: number; blocked: number }[];

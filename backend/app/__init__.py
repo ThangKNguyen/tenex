@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from .config import Config
 from .extensions import db, jwt, migrate, cors
 
@@ -27,5 +27,11 @@ def create_app() -> Flask:
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(upload_bp)
+
+    # Lightweight ping endpoint — no auth, no DB — for uptime bots to hit
+    # every 10 minutes to prevent Render's free tier from spinning down.
+    @app.route("/health")
+    def health():
+        return jsonify({"status": "ok"}), 200
 
     return app

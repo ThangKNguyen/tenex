@@ -34,7 +34,7 @@ reason, url_category, bytes_sent, bytes_received, http_method,
 response_code, threat_name, risk_score, threat_severity, rule_applied.
 
 Your job is to:
-1. Write a concise plain-English narrative (3-5 sentences) summarizing
+1. Write a concise plain-English narrative (5-7 sentences) summarizing
    what happened across the entire log file. Highlight the most important security
    events. Write it so a SOC analyst can read it in 10 seconds and know
    exactly what needs attention.

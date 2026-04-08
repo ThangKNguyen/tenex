@@ -58,7 +58,11 @@ export function SummaryCards({ summary, vertical = false }: SummaryCardsProps) {
       <Card
         label="Threats"
         value={summary.threats_detected}
-        sub={`${summary.critical_threats} critical`}
+        sub={
+          summary.threats_detected > 0
+            ? `${summary.critical_threats} critical · ${summary.high_threats} high`
+            : "none detected"
+        }
         accent={summary.threats_detected > 0 ? "red" : "green"}
       />
       <Card
