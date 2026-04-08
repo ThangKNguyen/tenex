@@ -4,19 +4,10 @@
  * The delete button removes the entry from history after confirmation.
  */
 
-interface HistoryItem {
-  upload_id: string;
-  filename: string;
-  uploaded_at: string;
-  summary: {
-    total_requests: number;
-    blocked_pct: number;
-    threats_detected: number;
-  } | null;
-}
+import type { UploadResult } from "@/types/log";
 
 interface UploadHistoryProps {
-  items: HistoryItem[];
+  items: UploadResult[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -61,7 +52,7 @@ export function UploadHistory({ items, selectedId, onSelect, onDelete }: UploadH
                     {item.filename}
                   </p>
                   <p className="text-text-muted text-[11px] font-mono mt-0.5">
-                    {new Date(item.uploaded_at).toLocaleString()}
+                    {item.uploaded_at ? new Date(item.uploaded_at).toLocaleString() : "—"}
                   </p>
                   {item.summary && (
                     <div className="flex gap-2 mt-2 flex-wrap">

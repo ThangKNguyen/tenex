@@ -16,6 +16,8 @@ export default defineConfig({
     proxy: {
       "/auth": "http://localhost:5000",
       "/upload": "http://localhost:5000",
+      "/uploads": "http://localhost:5000",
+      "/health": "http://localhost:5000",
     },
   },
 });

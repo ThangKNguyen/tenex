@@ -1,7 +1,6 @@
 # Claude
 .claude/
-*.md
-!progress.md
+CLAUDE.md
 
 # Environment
 .env

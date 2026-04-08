@@ -36,7 +36,10 @@ export function LogTable({ rows, anomalies = [] }: LogTableProps) {
 
   const anomalyByIndex = new Map(anomalies.map((a) => [a.row_index, a]));
 
-  const filtered = filter === "all" ? rows : rows.filter((r) => r.action === filter);
+  // Pair each row with its original index so anomaly lookups stay correct
+  // after filtering — avoids the O(n) indexOf call per row.
+  const indexed = rows.map((row, i) => ({ row, originalIdx: i }));
+  const filtered = filter === "all" ? indexed : indexed.filter((r) => r.row.action === filter);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const pageSlice = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -99,8 +102,7 @@ export function LogTable({ rows, anomalies = [] }: LogTableProps) {
             </tr>
           </thead>
           <tbody>
-            {pageSlice.map((row, filteredIdx) => {
-              const originalIdx = rows.indexOf(row);
+            {pageSlice.map(({ row, originalIdx }, filteredIdx) => {
               const anomaly = anomalyByIndex.get(originalIdx);
               const isFlagged = anomaly !== undefined;
 
