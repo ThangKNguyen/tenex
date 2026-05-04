@@ -2,8 +2,6 @@
 
 A full-stack web application for SOC analysts to upload, parse, and analyze ZScaler Web Proxy log files. Includes JWT authentication, an AI-powered threat analysis pipeline via Google Gemini, and a dark analyst-focused dashboard.
 
-**Live demo**: [https://tenex-neon.vercel.app](https://tenex-neon.vercel.app)
-
 **Video walk-through**: https://www.youtube.com/watch?v=8HuZXWSZXng
 
 **Note:** I'm using a free version of Gemini API on the application, so there's a chance the AI analysis won't work if I run out of usage. In that case, please just refer to my video for demo, contact me so I can update the API key, or download this project locally and use your own API key. Thank you for your understanding!
